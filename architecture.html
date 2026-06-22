@@ -1,0 +1,714 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epistemic Correction Bot — Architecture v0.2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Inter', sans-serif;
+    padding: 48px 40px;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    margin-bottom: 36px;
+  }
+  .header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #7c6aff;
+    text-transform: uppercase;
+  }
+  .header .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #484f58;
+    margin-top: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── PHASE LABELS ── */
+  .phase-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #484f58;
+    margin: 28px 0 10px 0;
+    padding-left: 2px;
+  }
+
+  /* ── NODE BASE ── */
+  .node {
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 4px;
+    position: relative;
+    border: 1px solid transparent;
+  }
+  .node-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .node-num .badge {
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+  .node-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #f0f6fc;
+  }
+  .node-desc {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #8b949e;
+  }
+  .node-desc ul {
+    margin-top: 6px;
+    padding-left: 16px;
+  }
+  .node-desc li {
+    margin-bottom: 3px;
+  }
+  .node-tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: #484f58;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid #21262d;
+  }
+  .warn-tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  /* ── ARROW ── */
+  .arrow {
+    text-align: center;
+    color: #30363d;
+    font-size: 18px;
+    line-height: 1;
+    margin: 2px 0;
+    user-select: none;
+  }
+  .arrow-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #484f58;
+    text-align: center;
+    margin-bottom: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── PARALLEL NODES ── */
+  .parallel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  /* ── NODE COLORS ── */
+  /* 0 — Adversarial Screen */
+  .node-red {
+    background: #1a0a0a;
+    border-color: #6e2020;
+  }
+  .node-red .node-num { color: #f85149; }
+  .node-red .badge-red { background: #3d0f0f; color: #f85149; }
+
+  /* 1 — User Input */
+  .node-violet {
+    background: #130d20;
+    border-color: #3d2a6e;
+  }
+  .node-violet .node-num { color: #a371f7; }
+
+  /* 2 — Content Router */
+  .node-teal {
+    background: #0a1f1f;
+    border-color: #1a4a4a;
+  }
+  .node-teal .node-num { color: #39d353; }
+
+  /* 3 — Framing Converter */
+  .node-blue {
+    background: #0d1a2e;
+    border-color: #1c3a6e;
+  }
+  .node-blue .node-num { color: #58a6ff; }
+
+  /* 4 — Claim Decomposition */
+  .node-indigo {
+    background: #0d1020;
+    border-color: #1e2a5e;
+  }
+  .node-indigo .node-num { color: #7c6aff; }
+
+  /* 5a — Steelman */
+  .node-green {
+    background: #0d1f12;
+    border-color: #1a4a26;
+  }
+  .node-green .node-num { color: #3fb950; }
+
+  /* 5b — Critique */
+  .node-amber {
+    background: #1f160a;
+    border-color: #4a3010;
+  }
+  .node-amber .node-num { color: #d29922; }
+
+  /* 6 — Synthesis */
+  .node-dark {
+    background: #161b22;
+    border-color: #30363d;
+  }
+  .node-dark .node-num { color: #8b949e; }
+
+  /* 7 — Grounding */
+  .node-cyan {
+    background: #0a1820;
+    border-color: #1a3a4a;
+  }
+  .node-cyan .node-num { color: #22c3e0; }
+
+  /* 8 — Confidence Router */
+  .node-gray {
+    background: #13181f;
+    border-color: #252c36;
+  }
+  .node-gray .node-num { color: #6e7681; }
+
+  /* 9 — Primer Filter */
+  .node-purple {
+    background: #160f2a;
+    border-color: #3a206e;
+  }
+  .node-purple .node-num { color: #d2a8ff; }
+
+  /* 10 — Output */
+  .node-output {
+    background: #0a1f12;
+    border-color: #1f4a2a;
+  }
+  .node-output .node-num { color: #3fb950; }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    border: none;
+    border-top: 1px dashed #21262d;
+    margin: 36px 0 28px 0;
+  }
+
+  /* ── VULNERABILITIES ── */
+  .vuln-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .vuln-item {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 5px;
+    padding: 12px 14px;
+  }
+  .vuln-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  .vuln-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .vuln-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f0f6fc;
+  }
+  .vuln-desc {
+    font-size: 11px;
+    color: #6e7681;
+    line-height: 1.5;
+    padding-left: 16px;
+  }
+  .dot-red    { background: #f85149; }
+  .dot-amber  { background: #d29922; }
+  .dot-blue   { background: #58a6ff; }
+  .dot-green  { background: #3fb950; }
+
+  /* ── TARGET MARKET ── */
+  .market-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .market-item {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 5px;
+    padding: 12px 14px;
+  }
+  .market-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .market-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .market-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f0f6fc;
+  }
+  .market-desc {
+    font-size: 11px;
+    color: #6e7681;
+    line-height: 1.5;
+    padding-left: 16px;
+  }
+
+  /* ── SECTION HEADERS ── */
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #484f58;
+    margin-bottom: 12px;
+  }
+
+  /* ── ROUTE BRANCHES ── */
+  .route-branch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 4px 0;
+  }
+  .route-card {
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #8b949e;
+    border: 1px dashed #21262d;
+  }
+  .route-card strong {
+    display: block;
+    font-size: 11px;
+    margin-bottom: 3px;
+    color: #c9d1d9;
+  }
+
+  .designed-note {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #6e7681;
+    background: #1c1410;
+    border: 1px solid #3d2a10;
+    border-radius: 4px;
+    padding: 5px 12px;
+    margin: 4px auto;
+    width: fit-content;
+  }
+
+  .new-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    background: #1a2a1a;
+    color: #3fb950;
+    border: 1px solid #1f4a26;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>Epistemic Correction Bot</h1>
+    <div class="subtitle">// architecture v0.2 — june 2026 &nbsp;|&nbsp; ten layers across four phases</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PHASE 1: INTAKE -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="phase-label">// phase 1 — intake</div>
+
+  <!-- Layer 0: Adversarial Screen -->
+  <div class="node node-red">
+    <div class="node-num">
+      ⓪ &nbsp;adversarial input screen
+      <span class="badge badge-red new-badge">new in v0.2</span>
+    </div>
+    <div class="node-title">Screen Before Processing</div>
+    <div class="node-desc">
+      Checks for prompt injection, jailbreak patterns, and attempts to weaponize the steelman layer.
+      Flags or rejects before any generation occurs. Non-negotiable for institutional credibility.
+    </div>
+    <span class="warn-tag" style="background:#2a0f0f;color:#f85149;border:1px solid #6e2020;">
+      ⚠ steelman layer is a potential laundering vector — screen first
+    </span>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- Layer 1: User Input -->
+  <div class="node node-violet">
+    <div class="node-num">① &nbsp;user input</div>
+    <div class="node-title">Raw Query</div>
+    <div class="node-desc">
+      User submits proposition in first person. No framing constraints required.
+    </div>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- Layer 2: Content Router -->
+  <div class="node node-teal">
+    <div class="node-num">
+      ② &nbsp;content router
+      <span class="new-badge">new in v0.2</span>
+    </div>
+    <div class="node-title">Creative vs. Fact-Based Classification</div>
+    <div class="node-desc">
+      Lightweight classifier determines pipeline path before expensive generation steps run.
+    </div>
+    <div class="route-branch" style="margin-top:10px;">
+      <div class="route-card">
+        <strong style="color:#3fb950;">→ fact-based route</strong>
+        Empirical claims, predictions, policy analysis, risk assessments.
+        Proceeds through full pipeline (layers 3–10).
+      </div>
+      <div class="route-card">
+        <strong style="color:#d29922;">→ creative route</strong>
+        Poems, narratives, brainstorming, open-ended ideation.
+        Divergence analysis is not meaningful. Routes to single-pass + primer filter.
+      </div>
+    </div>
+    <span class="node-tag">mixed queries default to fact-based — creative framing flagged in output</span>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PHASE 2: ANALYSIS -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="phase-label">// phase 2 — analysis (fact-based path)</div>
+
+  <!-- Layer 3: Framing Converter -->
+  <div class="node node-blue">
+    <div class="node-num">③ &nbsp;framing converter</div>
+    <div class="node-title">First Person → Third Party</div>
+    <div class="node-desc">
+      "I think X" → "A colleague proposes X"<br>
+      Strips emotional investment. No editorializing.
+    </div>
+    <span class="node-tag">bengio technique</span>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- Layer 4: Claim Decomposition -->
+  <div class="node node-indigo">
+    <div class="node-num">
+      ④ &nbsp;claim decomposition
+      <span class="new-badge">new in v0.2</span>
+    </div>
+    <div class="node-title">Break Complex Queries into Sub-Claims</div>
+    <div class="node-desc">
+      Complex queries contain multiple independent propositions with different evidence bases.
+      Without decomposition, synthesis cannot attribute divergence to specific sub-claims.
+      Implicit claims are surfaced and made explicit before the steelman/critique split runs.
+    </div>
+    <span class="node-tag">competing instances receive discrete sub-claims — not entangled arguments</span>
+  </div>
+
+  <div class="arrow-label">competing instances — no shared context</div>
+  <div class="arrow">↓</div>
+
+  <!-- Layers 5a/5b: Parallel -->
+  <div class="parallel">
+    <div class="node node-green">
+      <div class="node-num">⑤a &nbsp;llm a — steelman</div>
+      <div class="node-title">Find the Case For</div>
+      <div class="node-desc">
+        Strongest supporting evidence.<br>
+        Charitable interpretation.<br>
+        Assume competent advocates exist.
+      </div>
+    </div>
+    <div class="node node-amber">
+      <div class="node-num">⑤b &nbsp;llm b — critique</div>
+      <div class="node-title">Find the Case Against</div>
+      <div class="node-desc">
+        Weakest assumptions.<br>
+        Disconfirming evidence.<br>
+        Ways it could fail.
+      </div>
+    </div>
+  </div>
+
+  <div class="designed-note">⚠ designed opposition — not duplicate runs</div>
+  <div class="arrow">↓</div>
+
+  <!-- Layer 6: Synthesis -->
+  <div class="node node-dark">
+    <div class="node-num">⑥ &nbsp;synthesis layer</div>
+    <div class="node-title">Divergence Analysis</div>
+    <div class="node-desc">
+      Separates intersection (signal) from divergence (possible framing artifact or genuine uncertainty).
+      <ul>
+        <li>Genuine uncertainty → preserve and surface</li>
+        <li>Framing artifact → resolve without surfacing</li>
+        <li>Asymmetric evidence → do NOT average — flag and attribute</li>
+        <li>Value difference → flag explicitly as values-based, not evidence-based</li>
+      </ul>
+    </div>
+    <span class="warn-tag" style="background:#1a1204;color:#6e5a30;border:1px solid #3d3010;text-decoration:line-through;font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:3px;display:inline-block;margin-top:8px;">
+      risk: shared blind spots across 5a, 5b, and 6 may look like consensus
+    </span>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PHASE 3: GROUNDING -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="phase-label">// phase 3 — grounding</div>
+
+  <!-- Layer 7: Grounding Classifier -->
+  <div class="node node-cyan">
+    <div class="node-num">
+      ⑦ &nbsp;grounding classifier
+      <span class="new-badge">new in v0.2</span>
+    </div>
+    <div class="node-title">External Truth Source Lookup</div>
+    <div class="node-desc">
+      Identifies empirically resolvable claims after synthesis. Routes to external APIs before
+      uncertainty labeling is applied. Contested empirical questions remain in genuine uncertainty category.
+      <ul style="margin-top:6px;">
+        <li>Calculator API — mathematical or quantitative claims</li>
+        <li>Web search / retrieval — factual lookups with authoritative sources</li>
+        <li>Domain databases — actuarial, legal, financial (deployment-configured)</li>
+      </ul>
+    </div>
+    <span class="node-tag">grounding source bias risk — biased API produces false confidence</span>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- Layer 8: Confidence Router -->
+  <div class="node node-gray">
+    <div class="node-num">
+      ⑧ &nbsp;confidence router
+      <span class="new-badge">new in v0.2</span>
+    </div>
+    <div class="node-title">Cost Threshold Gate</div>
+    <div class="node-desc">
+      High-confidence synthesis outputs with no empirical claims may skip the grounding call,
+      reducing per-query cost. Addresses the 4–6 LLM call cost vulnerability.
+      Threshold is configurable per deployment.
+    </div>
+    <span class="node-tag">cost per query: 4–6 calls vs 1 baseline — value proposition must justify</span>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PHASE 4: PRESENTATION -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="phase-label">// phase 4 — presentation</div>
+
+  <!-- Layer 9: Primer Filter -->
+  <div class="node node-purple">
+    <div class="node-num">⑨ &nbsp;presentation layer</div>
+    <div class="node-title">Primer Filter</div>
+    <div class="node-desc">
+      Applies epistemic standards: confidence levels, fact vs. inference, calibrated uncertainty.
+      Shapes presentation only — cannot correct errors introduced at synthesis or grounding layers.
+    </div>
+    <span class="node-tag">primer prompt applied here</span>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <!-- Layer 10: Output -->
+  <div class="node node-output">
+    <div class="node-num">⑩ &nbsp;output</div>
+    <div class="node-title">Epistemically Labeled Response</div>
+    <div class="node-desc">
+      Explicit confidence levels. Divergence flags. What survived both framings vs. what appeared in only one.
+      Provenance tags on all claims — layer of origin, confidence level, framing coverage.
+      Grounding attribution where external APIs were called. Value-difference flags where normative
+      disagreement was identified.
+    </div>
+    <span class="node-tag" style="color:#3fb950;border-color:#1f4a26;">provenance tagging — new in v0.2</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- KNOWN VULNERABILITIES -->
+  <!-- ══════════════════════════════════════════════ -->
+  <hr class="section-divider">
+  <div class="section-title">// known vulnerabilities</div>
+  <div class="vuln-grid">
+    <div class="vuln-item">
+      <div class="vuln-header">
+        <div class="vuln-dot dot-red"></div>
+        <div class="vuln-name">Shared Training Bias</div>
+      </div>
+      <div class="vuln-desc">All three generation calls (5a, 5b, 6) may converge on same wrong answer. Convergence ≠ truth. No architectural mitigation yet.</div>
+    </div>
+    <div class="vuln-item">
+      <div class="vuln-header">
+        <div class="vuln-dot dot-red"></div>
+        <div class="vuln-name">False Neutrality</div>
+      </div>
+      <div class="vuln-desc">Synthesis of two biased outputs ≠ unbiased. Flat earth: if both say flat, truth is not in the middle.</div>
+    </div>
+    <div class="vuln-item">
+      <div class="vuln-header">
+        <div class="vuln-dot dot-amber"></div>
+        <div class="vuln-name">Synthesis Layer Bias</div>
+      </div>
+      <div class="vuln-desc">Synthesis LLM subject to same substrate bias. Misclassifying divergence type (e.g. value diff as genuine uncertainty) propagates errors downstream.</div>
+    </div>
+    <div class="vuln-item">
+      <div class="vuln-header">
+        <div class="vuln-dot dot-amber"></div>
+        <div class="vuln-name">Claim Decomposition Error <span class="new-badge">new</span></div>
+      </div>
+      <div class="vuln-desc">Incorrect split or merge of claims means steelman and critique operate on malformed inputs. Errors compound through synthesis.</div>
+    </div>
+    <div class="vuln-item">
+      <div class="vuln-header">
+        <div class="vuln-dot dot-amber"></div>
+        <div class="vuln-name">Grounding Source Bias <span class="new-badge">new</span></div>
+      </div>
+      <div class="vuln-desc">Routing a contested claim to a biased or low-quality external source produces false grounding confidence.</div>
+    </div>
+    <div class="vuln-item">
+      <div class="vuln-header">
+        <div class="vuln-dot dot-blue"></div>
+        <div class="vuln-name">Primer Reach Limit</div>
+      </div>
+      <div class="vuln-desc">Cannot correct errors introduced at synthesis or raw output layers. Errors reaching layer 9 get presented with false epistemic confidence.</div>
+    </div>
+    <div class="vuln-item">
+      <div class="vuln-header">
+        <div class="vuln-dot dot-blue"></div>
+        <div class="vuln-name">Cost Per Query</div>
+      </div>
+      <div class="vuln-desc">4–6 LLM calls vs 1. Partially addressed by confidence router in v0.2. Value proposition must justify unit economics.</div>
+    </div>
+    <div class="vuln-item">
+      <div class="vuln-header">
+        <div class="vuln-dot dot-green"></div>
+        <div class="vuln-name">No Feedback Loop <span class="new-badge">v0.3</span></div>
+      </div>
+      <div class="vuln-desc">User-flagged errors have no correction intake path. Synthesis accuracy cannot improve over time. Planned for v0.3.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TARGET MARKET -->
+  <!-- ══════════════════════════════════════════════ -->
+  <hr class="section-divider">
+  <div class="section-title">// target market</div>
+  <div class="market-grid">
+    <div class="market-item">
+      <div class="market-header">
+        <div class="market-dot" style="background:#a371f7;"></div>
+        <div class="market-name">Actuaries, risk analysts, compliance</div>
+      </div>
+      <div class="market-desc">Fiduciary obligation = real demand for reliability. Confidence labels and divergence flags are directly actionable in risk-adjusted decision frameworks.</div>
+    </div>
+    <div class="market-item">
+      <div class="market-header">
+        <div class="market-dot" style="background:#22c3e0;"></div>
+        <div class="market-name">M&A due diligence, forensic audit</div>
+      </div>
+      <div class="market-desc">Adversarial information environments validate the tool. Clients already assume competing framings exist — the pipeline makes that explicit.</div>
+    </div>
+    <div class="market-item">
+      <div class="market-header">
+        <div class="market-dot" style="background:#3fb950;"></div>
+        <div class="market-name">Investors, project planners</div>
+      </div>
+      <div class="market-desc">Quantifiable downstream cost of bad inputs. Calibrated uncertainty preferable to false precision in capital allocation decisions.</div>
+    </div>
+    <div class="market-item">
+      <div class="market-header">
+        <div class="market-dot" style="background:#d29922;"></div>
+        <div class="market-name">Journalists, researchers</div>
+      </div>
+      <div class="market-desc">Appetite exists, institutional incentive structures complex. Lower-priority segment for initial deployment.</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:40px;padding-top:16px;border-top:1px solid #21262d;font-family:'JetBrains Mono',monospace;font-size:10px;color:#30363d;display:flex;justify-content:space-between;">
+    <span>github.com/starbuckdev</span>
+    <span>epistemic correction bot — architecture v0.2 — june 2026</span>
+  </div>
+
+</div>
+</body>
+</html>
+
+
+
