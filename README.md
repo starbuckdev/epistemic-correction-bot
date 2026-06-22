@@ -112,7 +112,7 @@ The adversarial input screen came from thinking about the steelman layer as an a
 
 ## Origins
 
-This design was developed iteratively with Claude and DeepSeek. The Bengio node is named after Yoshua Bengio's technique of using competing instances with no shared context to reduce sycophancy. The primer prompt referenced in the presentation layer is published as a separate project.
+This design was developed iteratively with Claude and DeepSeek. The Bengio node is named after Yoshua Bengio's technique of rephrasing claims in third person to create distance and reduce sycophancy. The primer prompt referenced in the presentation layer is published as a separate project.
 
 ---
 
