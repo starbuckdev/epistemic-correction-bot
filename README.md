@@ -10,9 +10,9 @@ This is a design artifact, not a working implementation. It describes an archite
 
 The core insight: behavioral constitutions embedded in prompts are subject to the model's judgment about what warrants rigor. The model can and will bypass them. The fix is to move constraints out of the model's discretionary space and into the harness.
 
-This architecture addresses two specific failure modes: sycophancy (models defaulting to agreement and flattery) and format drift (models blending advocacy with criticism, dropping rigor when stakes seem low). It does not attempt to solve for shared training bias or ground truth verification. The goal is narrow and explicit.
+This architecture addresses two specific failure modes: sycophancy (models defaulting to agreement and flattery) and format drift (models blending advocacy with criticism, dropping rigor when stakes seem low). It does not attempt to solve for shared training bias. For empirically resolvable claims, the architecture outsources verification to external APIs via a grounding classifier.
 
-Version 0.2 extends the original six-layer pipeline with four new nodes: an adversarial input screen, a content router, a claim decomposition layer, and a grounding classifier. A confidence-based cost router and provenance tagging on all output claims are also introduced.
+Version 0.2 adds an adversarial input screen, a content router, a claim decomposition layer, and a grounding classifier. A confidence-based cost router and provenance tagging on all output claims are also introduced.
 
 The full design is documented in [`architecture.html`](architecture.html).
 
@@ -37,7 +37,7 @@ flowchart TD
     L --> M[Output]
 ```
 
-The pipeline runs ten layers across four phases.
+The pipeline is organized into four phases: Intake, Analysis, Grounding, and Presentation.
 
 **Phase 1: Intake**
 
