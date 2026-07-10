@@ -14,7 +14,7 @@ This architecture addresses two specific failure modes: sycophancy (models defau
 
 Version 0.2 adds an adversarial input screen, a content router, a claim decomposition layer, and a grounding classifier. A confidence-based cost router and provenance tagging on all output claims are also introduced.
 
-The full design is documented in [`architecture.html`](architecture.html).
+The full design is documented in [`https://starbuckdev.github.io/epistemic-correction-bot/architecture.html`](architecture.html).
 
 ---
 
